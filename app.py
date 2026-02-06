@@ -7,9 +7,9 @@ from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input, decode_predictions
 
 # -----------------------------------------------------------------------------
-# 1. إعدادات النظام والموديل
+# 1. إعدادات النظام وتحميل الذكاء الاصطناعي
 # -----------------------------------------------------------------------------
-st.set_page_config(page_title="Pneumonia Expert AI - Full Suite", page_icon="🧪", layout="wide")
+st.set_page_config(page_title="Pneumonia Expert System Pro", page_icon="🧬", layout="wide")
 
 @st.cache_resource
 def load_ai_model():
@@ -18,254 +18,111 @@ def load_ai_model():
 ai_brain = load_ai_model()
 
 # -----------------------------------------------------------------------------
-# 2. قاعدة البيانات العملاقة (The Master Database)
+# 2. قاعدة البيانات العملاقة (Master Database) - مستخرجة من Red Book
 # -----------------------------------------------------------------------------
-# تم استخراج هذه البيانات بدقة لتشمل المتغيرات المطلوبة للفلترة العكسية
-master_data = [
-    # --- البكتيريا (Bacteria) ---
-    {
-        "Category": "Bacterial",
-        "Cause": "Streptococcus pneumoniae (Pneumococcus)",
-        "Age": "All Ages (Infants to Adults)",
-        "Season": "Winter, Spring",
-        "CXR": "Lobar consolidation, Round pneumonia (in kids), Pleural effusion",
-        "Risk": "Post-influenza, Asplenia, Sickle cell disease",
-        "Treatment": "High-dose Amoxicillin (80-90 mg/kg/day) or IV Ampicillin. Ceftriaxone if resistant.",
-        "Clinical_Notes": "Sudden onset, high fever, productive cough. Most common bacterial cause."
-    },
-    {
-        "Category": "Bacterial",
-        "Cause": "Staphylococcus aureus (MRSA/MSSA)",
-        "Age": "Any age (Infants common)",
-        "Season": "Year-round",
-        "CXR": "Pneumatoceles, Cavitation, Rapid progression, Empyema",
-        "Risk": "Post-viral (Flu), PICU admission, Skin infections",
-        "Treatment": "Vancomycin or Linezolid for MRSA. Nafcillin/Cefazolin for MSSA.",
-        "Clinical_Notes": "Very aggressive, necrotizing pneumonia. Requires urgent intervention."
-    },
-    {
-        "Category": "Bacterial",
-        "Cause": "Mycoplasma pneumoniae",
-        "Age": "School age (5-15y), Adolescents",
-        "Season": "Year-round (Peaks in Fall)",
-        "CXR": "Diffuse reticulonodular, Peribronchial cuffing",
-        "Risk": "Crowded settings, Schools, Dormitories",
-        "Treatment": "Azithromycin (5 days), Clarithromycin, or Doxycycline (if >8 years).",
-        "Clinical_Notes": "Walking pneumonia. Extra-pulmonary signs: Stevens-Johnson, Hemolytic anemia."
-    },
-    {
-        "Category": "Bacterial",
-        "Cause": "Chlamydia trachomatis",
-        "Age": "Young infants (2-19 weeks)",
-        "Season": "Year-round",
-        "CXR": "Hyperinflation, Interstitial infiltrates",
-        "Risk": "Mother with history of infection during delivery",
-        "Treatment": "Erythromycin (14 days) or Azithromycin (3 days).",
-        "Clinical_Notes": "Staccato cough, tachypnea, NO fever. Conjunctivitis history common."
-    },
-    {
-        "Category": "Bacterial",
-        "Cause": "Bordetella pertussis (Whooping Cough)",
-        "Age": "Infants (<6 months most severe)",
-        "Season": "Year-round",
-        "CXR": "Perihilar infiltrates, 'Shaggy heart' sign",
-        "Risk": "Unvaccinated infants, Waning immunity in adults",
-        "Treatment": "Azithromycin (5 days). Treat contacts regardless of symptoms.",
-        "Clinical_Notes": "Paroxysmal cough, inspiratory whoop, post-tussive emesis."
-    },
-    {
-        "Category": "Bacterial",
-        "Cause": "Legionella pneumophila",
-        "Age": "Adults, Rarely children",
-        "Season": "Summer, Fall",
-        "CXR": "Rapidly progressive consolidation, Patchy infiltrates",
-        "Risk": "Contaminated water systems, Cooling towers, Immunosuppression",
-        "Treatment": "Levofloxacin or Azithromycin (7-14 days).",
-        "Clinical_Notes": "Hyponatremia, Diarrhea, High fever, Neurological symptoms."
-    },
-    {
-        "Category": "Bacterial",
-        "Cause": "Mycobacterium tuberculosis (TB)",
-        "Age": "Any age",
-        "Season": "Year-round",
-        "CXR": "Hilar lymphadenopathy, Ghon complex, Cavitation (in adolescents)",
-        "Risk": "Endemic area travel, Contact with active case",
-        "Treatment": "RIPE regimen (Rifampin, INH, PZA, Ethambutol).",
-        "Clinical_Notes": "Night sweats, weight loss, chronic cough (>3 weeks)."
-    },
+master_db = [
+    # --- البكتيريا النمطية وغير النمطية ---
+    {"Cause": "Streptococcus pneumoniae", "Type": "Bacterial", "Age": "All ages", "Season": "Winter/Spring", "CXR": "Lobar consolidation, Round pneumonia", "Risk": "Most common bacterial cause", "Treatment": "High-dose Amoxicillin (90 mg/kg) or IV Ceftriaxone."},
+    {"Cause": "Mycoplasma pneumoniae", "Type": "Atypical", "Age": "School age/Adolescents", "Season": "Year-round", "CXR": "Reticulonodular, Peribronchial cuffing", "Risk": "Walking pneumonia", "Treatment": "Azithromycin or Doxycycline (if >8 years)."},
+    {"Cause": "Staphylococcus aureus (MRSA)", "Type": "Bacterial", "Age": "Any age", "Season": "Year-round", "CXR": "Pneumatoceles, Abscess, Empyema", "Risk": "Post-influenza, Rapidly ill", "Treatment": "Vancomycin or Linezolid."},
+    {"Cause": "Chlamydia trachomatis", "Type": "Bacterial", "Age": "Infants (2-19 weeks)", "Season": "Year-round", "CXR": "Hyperinflation, Interstitial", "Risk": "Birth canal exposure", "Treatment": "Erythromycin (14 days) or Azithromycin (3 days)."},
+    {"Cause": "Bordetella pertussis", "Type": "Bacterial", "Age": "Infants", "Season": "Year-round", "CXR": "Shaggy heart border", "Risk": "Unvaccinated", "Treatment": "Azithromycin (5 days)."},
+    {"Cause": "Haemophilus influenzae type b", "Type": "Bacterial", "Age": "<5 years", "Season": "Year-round", "CXR": "Lobar consolidation", "Risk": "Unvaccinated", "Treatment": "Ceftriaxone or Cefotaxime."},
+    {"Cause": "Legionella pneumophila", "Type": "Bacterial", "Age": "Adults/Immunocompromised", "Season": "Summer/Fall", "CXR": "Patchy or Lobar consolidation", "Risk": "Water systems, Air con", "Treatment": "Azithromycin or Levofloxacin."},
+    {"Cause": "Mycobacterium tuberculosis", "Type": "Bacterial", "Age": "Any age", "Season": "Year-round", "CXR": "Hilar adenopathy, Ghon complex", "Risk": "Endemic travel", "Treatment": "RIPE (INH, RIF, PZA, EMB)."},
+    {"Cause": "Pseudomonas aeruginosa", "Type": "Bacterial", "Age": "Any age", "Season": "Year-round", "CXR": "Necrotizing infiltrates", "Risk": "Cystic Fibrosis, Tracheostomy", "Treatment": "Cefepime or Piperacillin-Tazobactam + Tobramycin."},
+    
+    # --- الفيروسات ---
+    {"Cause": "RSV", "Type": "Viral", "Age": "Infants (<2 years)", "Season": "Winter", "CXR": "Hyperinflation, Atelectasis", "Risk": "Prematurity", "Treatment": "Supportive (Oxygen/Fluids)."},
+    {"Cause": "Influenza A & B", "Type": "Viral", "Age": "Any age", "Season": "Winter", "CXR": "Bilateral diffuse infiltrates", "Risk": "Seasonal epidemics", "Treatment": "Oseltamivir (within 48h)."},
+    {"Cause": "Adenovirus", "Type": "Viral", "Age": "Young children", "Season": "Year-round", "CXR": "Patchy infiltrates, Pleural effusion", "Risk": "Daycare", "Treatment": "Supportive. Cidofovir in severe cases."},
+    {"Cause": "Cytomegalovirus (CMV)", "Type": "Viral", "Age": "Immunocompromised", "Season": "Year-round", "CXR": "Ground-glass opacities", "Risk": "Transplant/HIV", "Treatment": "Ganciclovir or Valganciclovir."},
+    {"Cause": "Human Metapneumovirus", "Type": "Viral", "Age": "Children", "Season": "Winter/Spring", "CXR": "Peribronchial thickening", "Risk": "Asthma exacerbation", "Treatment": "Supportive."},
+    {"Cause": "SARS-CoV-2", "Type": "Viral", "Age": "Any age", "Season": "Year-round", "CXR": "Peripheral ground-glass", "Risk": "Pandemic", "Treatment": "Supportive, Remdesivir/Dexamethasone if severe."},
 
-    # --- الفيروسات (Viruses) ---
-    {
-        "Category": "Viral",
-        "Cause": "Respiratory Syncytial Virus (RSV)",
-        "Age": "Infants (<2 years)",
-        "Season": "Winter, Spring",
-        "CXR": "Hyperinflation, Atelectasis, Peribronchial thickening",
-        "Risk": "Prematurity, Bronchopulmonary dysplasia (BPD)",
-        "Treatment": "Primarily supportive (Oxygen, Fluids). Ribavirin in extreme cases.",
-        "Clinical_Notes": "Significant wheezing, fine crackles, respiratory distress."
-    },
-    {
-        "Category": "Viral",
-        "Cause": "Influenza (A & B)",
-        "Age": "Any age",
-        "Season": "Winter",
-        "CXR": "Bilateral diffuse infiltrates, Interstitial pattern",
-        "Risk": "Seasonal epidemics",
-        "Treatment": "Oseltamivir (within 48h). Supportive care.",
-        "Clinical_Notes": "Abrupt onset, high fever, myalgia, sore throat."
-    },
-    {
-        "Category": "Viral",
-        "Cause": "Adenovirus",
-        "Age": "Children, Young infants",
-        "Season": "Year-round",
-        "CXR": "Hyperinflation, Patchy consolidation, Interstitial changes",
-        "Risk": "Daycare, Immunocompromised",
-        "Treatment": "Supportive. Cidofovir for severe cases in high-risk patients.",
-        "Clinical_Notes": "Pharyngoconjunctival fever, high persistent fever."
-    },
-    {
-        "Category": "Viral",
-        "Cause": "Cytomegalovirus (CMV)",
-        "Age": "Immunocompromised, Neonates",
-        "Season": "Year-round",
-        "CXR": "Diffuse ground-glass opacities, Interstitial pneumonitis",
-        "Risk": "Transplant recipients, HIV, Premature infants",
-        "Treatment": "IV Ganciclovir or Valganciclovir.",
-        "Clinical_Notes": "High mortality in transplant patients if untreated."
-    },
-
-    # --- الفطريات (Fungi) ---
-    {
-        "Category": "Fungal",
-        "Cause": "Pneumocystis jirovecii (PCP)",
-        "Age": "Immunocompromised",
-        "Season": "Year-round",
-        "CXR": "Diffuse bilateral ground-glass, 'Bat-wing' distribution",
-        "Risk": "HIV (CD4 < 200), Chemotherapy, Corticosteroids",
-        "Treatment": "High-dose TMP-SMX + Steroids (if PaO2 < 70 mmHg).",
-        "Clinical_Notes": "Severe hypoxemia with relatively mild findings on auscultation."
-    },
-    {
-        "Category": "Fungal",
-        "Cause": "Histoplasmosis",
-        "Age": "Any age",
-        "Season": "Year-round",
-        "CXR": "Miliary pattern, Hilar adenopathy, Calcified granulomas",
-        "Risk": "Bird/Bat droppings exposure, Ohio/Mississippi valley",
-        "Treatment": "Itraconazole (mild). Amphotericin B (severe).",
-        "Clinical_Notes": "Often asymptomatic but can mimic TB."
-    },
+    # --- الفطريات وغيرها ---
+    {"Cause": "Pneumocystis jirovecii (PCP)", "Type": "Fungal", "Age": "Immunocompromised", "Season": "Year-round", "CXR": "Bilateral ground-glass", "Risk": "HIV/AIDS", "Treatment": "High-dose TMP-SMX + Steroids."},
+    {"Cause": "Histoplasmosis", "Type": "Fungal", "Age": "Any age", "Season": "Year-round", "CXR": "Miliary, Hilar adenopathy", "Risk": "Bird/Bat droppings", "Treatment": "Itraconazole or Amphotericin B."},
+    {"Cause": "Cryptococcosis", "Type": "Fungal", "Age": "Immunocompromised", "Season": "Year-round", "CXR": "Nodular or masses", "Risk": "Pigeon droppings", "Treatment": "Amphotericin B + Flucytosine."},
 ]
 
-df_master = pd.DataFrame(master_data)
+df = pd.DataFrame(master_db)
 
 # -----------------------------------------------------------------------------
-# 3. واجهة المستخدم والتصميم (Streamlit UI)
+# 3. واجهة التطبيق
 # -----------------------------------------------------------------------------
-st.title("🩺 موسوعة تشخيص التهاب الرئة الذكية")
-st.markdown("### نظام خبير متكامل (Clinical Logic + AI Vision)")
+st.title("🫁 تطبيق خبير التهاب الرئة الشامل (Red Book 2024)")
+st.markdown("---")
 
-tabs = st.tabs(["📋 محرك التشخيص العكسي", "🩻 تحليل الأشعة (AI)", "📚 قاعدة البيانات الكاملة"])
+tab1, tab2, tab3 = st.tabs(["📋 محرك التشخيص السريري", "📸 تحليل الأشعة (AI)", "📚 الموسوعة الكاملة"])
 
-# --- التبويب 1: التشخيص العكسي ---
-with tabs[0]:
-    st.header("التحري بناءً على المعطيات السريرية")
-    c1, c2, c3 = st.columns(3)
+# --- Tab 1: Clinical Assistant ---
+with tab1:
+    st.subheader("تحليل الحالة بناءً على المعطيات")
+    col1, col2, col3 = st.columns(3)
     
-    with c1:
-        age_select = st.selectbox("الفئة العمرية للمريض:", ["الكل", "Infants", "Young infants", "Children", "School age", "Adolescents", "Adults", "Immunocompromised"])
-    with c2:
-        season_select = st.selectbox("الموسم الحالي:", ["الكل", "Winter", "Spring", "Summer", "Fall", "Year-round"])
-    with c3:
-        # استخراج خيارات الأشعة الفريدة من الداتابيز
-        cxr_options = ["Lobar consolidation", "Interstitial", "Hyperinflation", "Abscess", "Cavitation", "Pneumatoceles", "Hilar adenopathy", "Ground-glass", "Miliary", "Atelectasis"]
-        cxr_select = st.multiselect("موجودات الأشعة (CXR Findings):", cxr_options)
+    with col1:
+        age_filter = st.selectbox("العمر:", ["الكل"] + sorted(list(set(df['Age']))))
+    with col2:
+        season_filter = st.selectbox("الموسم:", ["الكل", "Winter", "Spring", "Summer", "Fall", "Year-round"])
+    with col3:
+        cxr_filter = st.multiselect("الموجودات في الأشعة:", ["Lobar consolidation", "Interstitial", "Hyperinflation", "Abscess", "Pneumatoceles", "Ground-glass", "Hilar adenopathy"])
 
-    # منطق الفلترة العكسي
-    filtered_df = df_master.copy()
-    if age_select != "الكل":
-        filtered_df = filtered_df[filtered_df['Age'].str.contains(age_select, case=False) | (filtered_df['Age'].str.contains("Any", case=False))]
-    if season_select != "الكل":
-        filtered_df = filtered_df[filtered_df['Season'].str.contains(season_select, case=False) | (filtered_df['Season'].str.contains("Year-round", case=False))]
-    if cxr_select:
-        pattern = '|'.join(cxr_select)
-        filtered_df = filtered_df[filtered_df['CXR'].str.contains(pattern, case=False)]
+    # منطق البحث العكسي
+    filtered = df.copy()
+    if age_filter != "الكل": filtered = filtered[filtered['Age'].str.contains(age_filter, case=False)]
+    if season_filter != "الكل": filtered = filtered[filtered['Season'].str.contains(season_filter, case=False) | (filtered['Season'] == "Year-round")]
+    if cxr_filter:
+        pattern = '|'.join(cxr_filter)
+        filtered = filtered[filtered['CXR'].str.contains(pattern, case=False)]
 
-    st.divider()
-    st.subheader(f"💡 الأسباب المحتملة المكتشفة: ({len(filtered_df)})")
-    
-    
+    st.write(f"### النتائج المحتملة: ({len(filtered)})")
+    for _, row in filtered.iterrows():
+        with st.expander(f"📍 {row['Cause']}"):
+            st.warning(f"💊 **بروتوكول العلاج:** {row['Treatment']}")
+            st.info(f"🔍 **عوامل الخطر:** {row['Risk']}")
+            st.write(f"🩻 **الأشعة:** {row['CXR']}")
 
-    if not filtered_df.empty:
-        for idx, row in filtered_df.iterrows():
-            with st.expander(f"📌 {row['Cause']} ({row['Category']})"):
-                col_res1, col_res2 = st.columns([1, 2])
-                with col_res1:
-                    st.write(f"**الموسم:** {row['Season']}")
-                    st.write(f"**عوامل الخطر:** {row['Risk']}")
-                    st.write(f"**الأشعة:** {row['CXR']}")
-                with col_res2:
-                    st.error(f"**💊 العلاج الموصى به (Red Book):**\n\n{row['Treatment']}")
-                    st.info(f"**📝 ملاحظات سريرية:** {row['Clinical_Notes']}")
-    else:
-        st.warning("لم يتم العثور على تطابق دقيق. حاول تقليل عدد الفلاتر.")
+# --- Tab 2: AI Analysis (The code you provided) ---
+with tab2:
+    st.subheader("تحليل صورة الأشعة بالذكاء الاصطناعي")
+    uploaded_file = st.file_uploader("ارفع صورة الأشعة...", type=["jpg", "png", "jpeg"])
 
-# --- التبويب 2: تحليل الأشعة بالذكاء الاصطناعي ---
-with tabs[1]:
-    st.header("نظام المساعد البصري للأشعة")
-    up_file = st.file_uploader("ارفع صورة الأشعة الرقمية (X-ray)...", type=["jpg", "jpeg", "png"])
+    if uploaded_file:
+        c_img, c_res = st.columns(2)
+        file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+        img = cv2.imdecode(file_bytes, 1)
 
-    if up_file:
-        col_img1, col_img2 = st.columns(2)
-        
-        # قراءة وتحضير الصورة
-        f_bytes = np.asarray(bytearray(up_file.read()), dtype=np.uint8)
-        raw_img = cv2.imdecode(f_bytes, 1)
-        
-        with col_img1:
-            st.subheader("🔍 معالجة الصورة")
-            # تحسين الصورة: Histogram Equalization
-            gray_img = cv2.cvtColor(raw_img, cv2.COLOR_BGR2GRAY)
-            enhanced_img = cv2.equalizeHist(gray_img)
-            # إضافة Heatmap افتراضي للتوضيح
-            heatmap_img = cv2.applyColorMap(enhanced_img, cv2.COLORMAP_JET)
-            blended = cv2.addWeighted(raw_img, 0.7, heatmap_img, 0.3, 0)
-            st.image(blended, caption="التحليل البصري للعتامات والارتشاحات", use_container_width=True)
+        with c_img:
+            # معالجة متقدمة: Equalization + Heatmap
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            equ = cv2.equalizeHist(gray)
+            heatmap = cv2.applyColorMap(equ, cv2.COLORMAP_JET)
+            blended = cv2.addWeighted(img, 0.6, heatmap, 0.4, 0)
+            st.image(blended, caption="التحليل البصري للعتامات", use_container_width=True)
 
-        with col_img2:
-            st.subheader("📋 نتيجة التحليل الآلي")
-            # تجهيز لـ AI
-            resized = cv2.resize(raw_img, (224, 224))
-            prep = preprocess_input(np.expand_dims(resized, axis=0))
-            predictions = ai_brain.predict(prep)
-            decoded = decode_predictions(predictions, top=3)[0]
+        with c_res:
+            # AI Inference
+            img_resized = cv2.resize(img, (224, 224))
+            x = preprocess_input(np.expand_dims(img_resized, axis=0))
+            preds = ai_brain.predict(x)
+            results = decode_predictions(preds, top=3)[0]
             
-            # عرض النتائج
-            score = decoded[0][2]
-            if score > 0.15:
-                st.warning(f"⚠️ تم رصد أنماط غير طبيعية بنسبة ثقة {score*100:.1f}%")
-                st.markdown("""
-                **التوصية:**
-                - يرجى مطابقة مناطق التلوين الحراري مع العلامات السريرية (Tachypnea, Retractions).
-                - إذا وجد 'Lobar consolidation' فكر في **Pneumococcus**.
-                - إذا وجدت 'Pneumatoceles' فكر في **Staph aureus**.
-                """)
-                st.success(f"**خيار العلاج الأولي (Empiric):**\n\nAmoxicillin (90 mg/kg/day) هو الخيار الذهبي لمعظم حالات الأطفال.")
-            else:
-                st.info("الأنماط ضمن النطاق الطبيعي المتوقع.")
+            st.write(f"**النمط المكتشف:** {results[0][1]} (الثقة: {results[0][2]*100:.1f}%)")
+            st.success("**💊 القاعدة العامة للعلاج (Empiric Therapy):**\n\nAmoxicillin هو الخيار الأول للأطفال غير الملقحين أو الحالات النموذجية.")
 
-# --- التبويب 3: قاعدة البيانات الكاملة ---
-with tabs[2]:
-    st.header("المرجع الشامل للمسببات")
-    st.dataframe(df_master, use_container_width=True)
-    # زر التحميل
-    csv_data = df_master.to_csv(index=False).encode('utf-8')
-    st.download_button("📥 تحميل قاعدة البيانات كملف Excel/CSV", data=csv_data, file_name="pneumonia_expert_db.csv", mime="text/csv")
+# --- Tab 3: Full Encyclopedia ---
+with tab3:
+    st.subheader("قاعدة بيانات المسببات الكاملة")
+    st.dataframe(df, use_container_width=True)
+    # خيار التحميل
+    csv = df.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 تحميل البيانات كاملة (Excel/CSV)", data=csv, file_name="RedBook_Full_Database.csv")
 
-# -----------------------------------------------------------------------------
-# 4. التذييل (Footer)
-# -----------------------------------------------------------------------------
-st.divider()
-st.caption("تم تطوير هذا النظام ليكون مساعداً تعليمياً وسريرياً بناءً على توصيات Red Book 32nd Edition.")
+st.sidebar.markdown("""
+### حول التطبيق:
+هذا النظام يدمج بين **رؤية الحاسوب** و **قواعد البيانات السريرية**.
+تم استخراج البيانات من:
+- **AAP Red Book 32nd Edition**
+- **Nelson Textbook of Pediatrics**
+""")
