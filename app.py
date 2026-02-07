@@ -1,97 +1,145 @@
 import streamlit as st
+import json
+import os
 
-# إعدادات الصفحة
-st.set_page_config(page_title="BSPED DKA Calculator", layout="wide")
+# إعداد صفحة التطبيق
+st.set_page_config(
+    page_title="Pneumonia Etiology Guide",
+    page_icon="🫁",
+    layout="wide"
+)
 
-st.title("🩺 تطبيق التدبير المثالي للحماض الكيتوني السكري (DKA)")
-st.subheader("بناءً على تحديثات BSPED 2024 للأطفال دون 18 عاماً")
-
-# --- القائمة الجانبية للمدخلات ---
-with st.sidebar:
-    st.header("بيانات المريض")
-    weight = st.number_input("الوزن (كجم)", min_value=1.0, max_value=150.0, value=20.0)
-    ph = st.number_input("قيمة الـ pH", min_value=6.7, max_value=7.5, value=7.1, step=0.01)
-    bolus_given = st.number_input("سوائل الإنعاش المعطاة سابقاً (ml)", min_value=0, value=0)
+# --- دالة تحميل البيانات ---
+@st.cache_data
+def load_data():
+    # تأكد من أن ملف pneumonia.json موجود في نفس المجلد
+    file_path = 'pneumonia.json'
+    if not os.path.exists(file_path):
+        st.error("ملف البيانات (pneumonia.json) غير موجود! يرجى وضعه في نفس مجلد الكود.")
+        return []
     
-    st.divider()
-    insulin_dose = st.select_slider(
-        "معدل الأنسولين (Units/kg/hr)",
-        options=[0.05, 0.1],
-        value=0.1,
-        help="0.05 للأطفال الصغار جداً أو حسب حساسية الحالة"
-    )
+    with open(file_path, 'r', encoding='utf-8') as f:
+        try:
+            data = json.load(f)
+            return data
+        except json.JSONDecodeError:
+            st.error("هناك خطأ في تنسيق ملف JSON.")
+            return []
 
-# --- المنطق الحسابي (Logic) ---
+data = load_data()
 
-# 1. تحديد نسبة الجفاف بناءً على pH
-if ph < 7.1:
-    dehydration_percent = 10.0
-    severity = "Severe (شديد)"
-elif ph < 7.2:
-    dehydration_percent = 5.0
-    severity = "Moderate (متوسط)"
-else:
-    dehydration_percent = 5.0
-    severity = "Mild (خفيف)"
+# --- الشريط الجانبي (Filters) ---
+st.sidebar.title("🔍 أدوات التشخيص (Filters)")
+st.sidebar.markdown("---")
 
-# 2. حساب سوائل الإدامة (Maintenance) حسب قاعدة BSPED المعدلة
-# أول 10 كجم = 2 مل/كجم/ساعة
-# من 11-20 كجم = 0.5 مل/كجم/ساعة
-# ما فوق 20 كجم = 0.2 مل/كجم/ساعة
-def calculate_maintenance(w):
-    if w <= 10:
-        m = w * 2
-    elif w <= 20:
-        m = 20 + (w - 10) * 0.5
-    else:
-        m = 25 + (w - 20) * 0.2
-    return min(m, 80) # الحد الأقصى 80 مل/ساعة
+# 1. فلتر البحث العام
+search_query = st.sidebar.text_input("بحث سريع (Keywords)", placeholder="مثال: Birds, HIV, fever...")
 
-maintenance_rate = calculate_maintenance(weight)
-
-# 3. حساب العجز (Deficit) وتعويضه على 48 ساعة
-total_deficit_vol = dehydration_percent * weight * 10
-hourly_deficit_rate = (total_deficit_vol - bolus_given) / 48
-
-# 4. المجموع الكلي للسوائل
-total_hourly_rate = maintenance_rate + hourly_deficit_rate
-
-# --- عرض النتائج ---
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.info(f"**تصنيف الحالة:** {severity}")
-    st.metric(label="نسبة الجفاف المقدرة", value=f"{dehydration_percent}%")
-    st.metric(label="إجمالي العجز (Total Deficit)", value=f"{total_deficit_vol:.1f} ml")
-
-with col2:
-    st.success("**خطة السوائل الوريدية (ml/hr)**")
-    st.write(f"💧 سوائل الإدامة: **{maintenance_rate:.1f} ml/hr**")
-    st.write(f"📉 تعويض العجز: **{hourly_deficit_rate:.1f} ml/hr**")
-    st.divider()
-    st.metric(label="المعدل الكلي للسوائل", value=f"{total_hourly_rate:.1f} ml/hr")
-
-st.divider()
-
-# --- قسم الأنسولين والمراقبة ---
-st.warning("⚠️ **الأنسولين الوريدي**")
-st.write(f"ابدأ الأنسولين بعد ساعة إلى ساعتين من بدء السوائل بمعدل: **{weight * insulin_dose:.2f} Units/hr**")
-
-st.markdown("""
-### 📋 قائمة المراقبة (Checklist):
-* **نوع المحلول:** Plasma-Lyte 148 أو NaCl 0.9% مع **40 mmol/L البوتاسيوم**.
-* **الغلوكوز:** أضف الغلوكوز 5% للمحلول عندما ينخفض السكر عن **14 mmol/L**.
-* **المراقبة:** مراقبة علامات وذمة الدماغ (صداع، انخفاض نبض، تغير وعي) كل ساعة.
-* **المختبر:** فحص الكيتونات والسكر كل ساعة، والشوارد كل 2-4 ساعات.
-""")
-
-# زر لتحميل التقرير كـ JSON (اختياري)
-results = {
-    "weight": weight,
-    "ph": ph,
-    "severity": severity,
-    "hourly_fluid_rate": round(total_hourly_rate, 2),
-    "insulin_rate": round(weight * insulin_dose, 2)
+# 2. فلتر العمر (Age Group)
+# بما أن البيانات نصية، سنقوم بربط الاختيار بكلمات مفتاحية للبحث
+age_mapping = {
+    "الكل (All)": [],
+    "حديثي الولادة (Neonates < 1m)": ["neonate", "birth", "0-28", "vertical", "early-onset"],
+    "الرضع (Infants 1m-1y)": ["infant", "young children", "weeks", "months"],
+    "الأطفال (Children)": ["child", "school", "5 and 15", "years"],
+    "البالغين/الكبار (Adults/Elderly)": ["adult", "elderly", "65"]
 }
-st.sidebar.download_button("تحميل ملخص الحالة (JSON)", str(results), file_name="dka_summary.json")
+selected_age_group = st.sidebar.selectbox("الفئة العمرية (Age Group)", list(age_mapping.keys()))
+
+# 3. فلتر علامات الأشعة (CXR Findings)
+cxr_keywords = [
+    "Consolidation", "Lobar", "Patchy", "Interstitial", 
+    "Ground glass", "Effusion", "Abscess", "Cavity", 
+    "Hyperinflation", "Nodular", "Mass"
+]
+selected_cxr = st.sidebar.multiselect("علامات صورة الصدر (CXR Findings)", cxr_keywords)
+
+# 4. فلتر عوامل الخطر (Risk Factors)
+risk_keywords = [
+    "Immunocompromised", "HIV", "Cystic Fibrosis", "Asthma", 
+    "Sickle Cell", "Aspiration", "Birds", "Animals"
+]
+selected_risks = st.sidebar.multiselect("عوامل الخطر (Risk Factors)", risk_keywords)
+
+# --- منطق الفلترة (Filtering Logic) ---
+filtered_data = []
+
+for entry in data:
+    match = True
+    
+    # دمج كل النصوص في المدخل للبحث العام
+    all_text = " ".join([str(v) for v in entry.values() if v]).lower()
+    
+    # 1. تطبيق البحث العام
+    if search_query and search_query.lower() not in all_text:
+        match = False
+    
+    # 2. تطبيق فلتر العمر
+    if match and selected_age_group != "الكل (All)":
+        age_text = str(entry.get('best_age', '') or '').lower()
+        # التحقق مما إذا كانت أي من الكلمات المفتاحية للفئة العمرية موجودة
+        age_keywords = age_mapping[selected_age_group]
+        if not any(k in age_text or k in str(entry.get('CLINICAL MANIFESTATIONS', '')).lower() for k in age_keywords):
+            match = False
+
+    # 3. تطبيق فلتر CXR
+    if match and selected_cxr:
+        cxr_text = str(entry.get('cxr_findings', '') or '').lower()
+        # يجب أن يحتوي النص على *واحد على الأقل* من الخيارات المحددة
+        if not any(k.lower() in cxr_text for k in selected_cxr):
+            match = False
+            
+    # 4. تطبيق فلتر عوامل الخطر
+    if match and selected_risks:
+        risk_text = str(entry.get('risk_factors', '') or '').lower()
+        if not any(k.lower() in risk_text for k in selected_risks):
+            match = False
+
+    if match:
+        filtered_data.append(entry)
+
+# --- الواجهة الرئيسية ---
+st.title("🫁 دليل مسببات ذات الرئة (Pneumonia Etiology)")
+st.markdown(f"**عدد النتائج المطابقة:** {len(filtered_data)}")
+
+if len(filtered_data) == 0:
+    st.warning("لا توجد نتائج تطابق الفلاتر الحالية. حاول تخفيف شروط البحث.")
+else:
+    for item in filtered_data:
+        # تحديد اللون بناءً على نوع المسبب (اختياري لتحسين الشكل)
+        cause_name = item.get('pneumonia_cause', 'Unknown')
+        
+        with st.expander(f"🦠 {cause_name}", expanded=False):
+            col1, col2 = st.columns([2, 1])
+            
+            with col1:
+                st.markdown("### 📋 Clinical Manifestations")
+                st.write(item.get('CLINICAL MANIFESTATIONS') or "Non specific")
+                
+                st.markdown("### 💊 Treatment")
+                # دمج حقول العلاج إذا وجدت
+                tx = item.get('treatment_pneumonia') or item.get('treatment')
+                st.info(tx or "Supportive / Refer to guidelines")
+
+            with col2:
+                # عرض البيانات الوصفية في جدول صغير
+                st.markdown("### 🔍 Key Features")
+                
+                if item.get('cxr_findings'):
+                    st.markdown(f"**🩻 CXR:** {item.get('cxr_findings')}")
+                
+                if item.get('risk_factors'):
+                    st.markdown(f"**⚠️ Risk Factors:** {item.get('risk_factors')}")
+                
+                if item.get('best_age'):
+                    st.markdown(f"**👶 Age:** {item.get('best_age')}")
+                
+                if item.get('diagnosis'):
+                    st.markdown(f"**🧪 Diagnosis:** {item.get('diagnosis')}")
+
+                if item.get('regions'):
+                    st.markdown(f"**🌍 Region:** {item.get('regions')}")
+
+# --- تذييل الصفحة ---
+st.markdown("---")
+st.caption("Developed for Clinical Decision Support. Based on Red Book Data.")
